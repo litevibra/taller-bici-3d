@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'">
+<title>Taller de Bicis 3D</title>
+<link href="vendor/fonts.css" rel="stylesheet">
+<style>
+/* VOICE: taller de bicis de noche, enérgico y prolijo, como una app de configuración real
+   IDEA: el banco de trabajo del mecánico: la bici en el centro, marcadores sobre cada pieza
+   PICTURE: bici 3D de enduro que gira, con marcadores azules y el elegido en verde
+   COLOUR and TYPE: grafito profundo, azul marcador #2aa8ff, verde de selección #3ddc6b; Barlow Condensed + Barlow
+   LAYOUT: escenario grande a la izquierda y panel de pintura a la derecha; en el celu se apilan */
+:root{color-scheme:dark;--bg:#14161a;--panel:#1d2026;--line:#2d313a;--ink:#eef0f3;--mut:#9aa1ad;--blue:#2aa8ff;--green:#3ddc6b}
+:root[data-theme=light],:root[data-theme=dark]{color-scheme:dark}
+:root{--st:var(--safe-area-inset-top,env(safe-area-inset-top,0px));--sb:var(--safe-area-inset-bottom,env(safe-area-inset-bottom,0px));--sl:var(--safe-area-inset-left,env(safe-area-inset-left,0px));--sr:var(--safe-area-inset-right,env(safe-area-inset-right,0px))}
+body{padding:0 var(--sr) var(--sb) var(--sl);-webkit-tap-highlight-color:transparent;user-select:none}
+input,textarea{user-select:text}
+*{box-sizing:border-box;min-width:0}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Barlow,system-ui,sans-serif;overflow-x:clip}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:#262a32;border-radius:10px;min-height:44px;padding:0 14px}
+button:hover{border-color:#4a505c}
+button:focus-visible,input:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 340px;grid-template-rows:auto minmax(0,1fr);height:calc(100dvh - var(--sb));min-height:520px}
+header{grid-column:1/-1;display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:calc(10px + var(--st)) max(2vw,14px) 10px;border-bottom:1px solid var(--line)}
+h1{font:700 30px/1.05 "Barlow Condensed",sans-serif;margin:0;letter-spacing:.01em}
+h1 span{color:var(--blue)}
+.name{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--mut);font-size:14px}
+.name input{width:200px;min-height:40px;border-radius:10px;border:1px solid var(--line);background:#101216;padding:0 12px;font-size:16px}
+.stage{position:relative;overflow:hidden;background:radial-gradient(ellipse 70% 55% at 50% 62%,#3a3f49 0%,#22252b 45%,#121418 100%)}
+.stage canvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#hs{position:absolute;inset:0;pointer-events:none}
+.hs{position:absolute;transform:translate(-50%,-100%);pointer-events:auto;border:0;background:none;min-height:0;padding:0;display:flex;flex-direction:column;align-items:center}
+.hs b{font:600 13px/1 "Barlow Condensed",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#fff;text-shadow:0 1px 3px #000;white-space:nowrap;margin-bottom:3px}
+.hs i{width:18px;height:22px;background:var(--blue);border-radius:50% 50% 50% 0;transform:rotate(-45deg);box-shadow:0 2px 6px #0008;border:2px solid #ffffffcc}
+.hs.sel i{background:var(--green);animation:pop .5s}
+.hs.sel b{color:var(--green)}
+.nolabels .hs:not(.sel):not(:hover) b{display:none}
+.hidehs #hs{display:none}
+@keyframes pop{50%{transform:rotate(-45deg) scale(1.35)}}
+.tools{position:absolute;left:12px;bottom:12px;display:flex;gap:8px;flex-wrap:wrap;right:12px}
+.tools button{background:#1d2026e6;backdrop-filter:blur(6px);font-size:14px}
+.tools button[aria-pressed=true]{border-color:var(--blue);color:var(--blue)}
+.hint{position:absolute;top:10px;left:12px;font-size:13px;color:var(--mut)}
+aside{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:18px}
+h2{font:700 24px/1.05 "Barlow Condensed",sans-serif;margin:0}
+h3{font:600 13px/1.2 Barlow,sans-serif;color:var(--mut);margin:0 0 8px}
+.sw{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:6px}
+.sw button{min-height:0;aspect-ratio:1;border-radius:8px;padding:0;border:2px solid #0006}
+.sw button.on{outline:2px solid #fff;outline-offset:1px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.row>button{flex:1 1 auto}
+.fin button[aria-pressed=true],.chips button.on{background:var(--blue);border-color:var(--blue);color:#06121c;font-weight:600}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chips button{min-height:36px;font-size:14px;padding:0 10px;border-radius:18px}
+label.chk{display:flex;gap:8px;align-items:center;font-size:15px;min-height:36px}
+label.chk input{width:20px;height:20px;accent-color:var(--blue)}
+.custom{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:14px;color:var(--mut)}
+.custom input{width:44px;height:36px;border:0;background:none;padding:0}
+.slots{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.slots button{font:700 18px "Barlow Condensed";padding:0}
+.slots button.full{border-color:var(--green)}
+.primary{background:var(--blue);border-color:var(--blue);color:#06121c;font-weight:600}
+dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;width:min(760px,94vw);padding:20px}
+dialog::backdrop{background:#000a}
+.garage{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin:14px 0}
+.card{background:#14161a;border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.card .th{aspect-ratio:16/10;background:radial-gradient(ellipse at 50% 60%,#3a3f49,#14161a);display:grid;place-items:center;color:var(--mut);font-size:14px}
+.card img{width:100%;height:100%;object-fit:cover;display:block}
+.card .b{padding:8px;display:flex;flex-direction:column;gap:6px}
+.card .b strong{font:600 17px "Barlow Condensed"}
+.card .row button{min-height:38px;font-size:14px;padding:0 8px}
+textarea{width:100%;min-height:70px;background:#101216;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px;font:13px/1.4 ui-monospace,monospace}
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,40px);opacity:0;background:var(--green);color:#06210f;font-weight:600;padding:10px 18px;border-radius:24px;transition:.3s;pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.note{font-size:13px;color:var(--mut);margin:0}
+@media(max-width:820px){
+ .app{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 66vh auto;height:auto}
+ .hs i{width:13px;height:16px;border-width:1.5px}
+ aside{border-left:0;border-top:1px solid var(--line);overflow:visible}
+ .name{margin-left:0;width:100%}.name input{flex:1}
+ h1{font-size:26px}
+}
+@media(prefers-reduced-motion:reduce){.hs.sel i{animation:none}.toast{transition:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+ <header>
+  <h1>Taller de Bicis <span>3D</span></h1>
+  <label class="name">Nombre de tu bici <input id="bikeName" maxlength="24" value="Mi enduro"></label>
+ </header>
+ <section class="stage" id="stage" aria-label="Bici en 3D: arrastrá para girarla, tocá una pieza para pintarla">
+  <canvas id="cv"></canvas>
+  <div id="hs"></div>
+  <div class="hint">Arrastrá para girar · pellizcá para hacer zoom · tocá una pieza</div>
+  <div class="tools">
+   <button data-view="lado">Costado</button>
+   <button data-view="tres">3/4</button>
+   <button data-view="frente">Frente</button>
+   <button id="ride" aria-pressed="false">▶ Andar</button>
+   <button id="spin" aria-pressed="false">Girar sola</button>
+   <button id="marks" aria-pressed="true">Marcadores</button>
+  </div>
+ </section>
+ <aside>
+  <div>
+   <h3>Pieza elegida</h3>
+   <h2 id="partName">Cuadro</h2>
+  </div>
+  <div>
+   <h3>Color</h3>
+   <div class="sw" id="sw"></div>
+   <label class="custom">Otro color <input type="color" id="pick" value="#2aa8ff"></label>
+  </div>
+  <div>
+   <h3>Terminación</h3>
+   <div class="row fin" id="fin"></div>
+  </div>
+  <label class="chk"><input type="checkbox" id="link" checked> Rueda delantera y trasera iguales</label>
+  <div>
+   <h3>Todas las piezas</h3>
+   <div class="chips" id="chips"></div>
+  </div>
+  <div class="row">
+   <button id="undo">↶ Deshacer</button>
+   <button id="rand">Al azar</button>
+   <button id="reset">Original</button>
+  </div>
+  <div>
+   <h3>Guardar en un lugar</h3>
+   <div class="slots" id="slots"></div>
+  </div>
+  <button class="primary" id="openGarage">Abrir el garaje</button>
+ </aside>
+</div>
+
+<dialog id="garage">
+ <h2>Tu garaje</h2>
+ <div class="garage" id="cards"></div>
+ <h3>Compartir un diseño</h3>
+ <p class="note">Copiá el código de tu bici para pasárselo a un amigo. Si te pasaron un código, pegalo abajo para ver esa bici.</p>
+ <textarea id="code" placeholder="Pegá acá un código de bici"></textarea>
+ <div class="row" style="margin-top:8px">
+  <button id="copyCode">Copiar código de esta bici</button>
+  <button id="loadCode">Cargar código</button>
+  <button id="closeGarage" class="primary">Volver al taller</button>
+ </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/OrbitControls.js"></script>
+<script>
+{
+const $=s=>document.querySelector(s);
+const V=(x,y,z=0)=>new THREE.Vector3(x,y,z);
+
+/* ---------- Piezas: nombre, color de fábrica, terminación y dónde va el marcador ---------- */
+const PARTS=[
+ ['cuadro','Cuadro','#e8e8ea','brillo',[0.22,0.82,0]],
+ ['basculante','Basculante','#e8e8ea','brillo',[-0.36,0.5,0.07]],
+ ['amortiguador','Amortiguador','#2b2b2b','mate',[0.03,0.7,0.03]],
+ ['resorte','Resorte','#ff4d2e','brillo',[0.07,0.76,0.05]],
+ ['barras','Barras horquilla','#f2b233','metal',[0.5,0.73,0.07]],
+ ['horquilla','Horquilla','#1a1a1a','mate',[0.6,0.5,0.07]],
+ ['cub_del','Cubierta del.','#1c1c1c','mate',[0.81,0.69,0]],
+ ['cub_tras','Cubierta tras.','#1c1c1c','mate',[-0.79,0.69,0]],
+ ['llanta_del','Llanta del.','#111111','mate',[0.62,0.07,0.02]],
+ ['llanta_tras','Llanta tras.','#111111','mate',[-0.6,0.07,0.02]],
+ ['rayos_del','Rayos del.','#8a8d93','metal',[0.86,0.5,0]],
+ ['rayos_tras','Rayos tras.','#8a8d93','metal',[-0.86,0.5,0]],
+ ['maza_del','Maza del.','#d7263d','metal',[0.66,0.45,0.07]],
+ ['maza_tras','Maza tras.','#d7263d','metal',[-0.56,0.45,0.07]],
+ ['disco_del','Disco del.','#c8cacd','cromo',[0.55,0.25,-0.06]],
+ ['disco_tras','Disco tras.','#c8cacd','cromo',[-0.67,0.25,-0.06]],
+ ['asiento','Asiento','#151515','mate',[-0.22,1.1,0]],
+ ['tija','Tija','#111111','mate',[-0.18,0.96,0.02]],
+ ['manubrio','Manubrio','#111111','mate',[0.5,1.06,-0.3]],
+ ['potencia','Potencia','#d7263d','metal',[0.42,0.99,0]],
+ ['punos','Puños','#111111','mate',[0.5,1.06,0.33]],
+ ['plato','Plato','#d7263d','metal',[-0.04,0.42,0.09]],
+ ['palancas','Palancas','#111111','mate',[0.08,0.3,0.1]],
+ ['pedales','Pedales','#d7263d','metal',[0.13,0.22,0.16]],
+].map(([id,n,c,f,a])=>({id,n,c,f,a:V(...a)}));
+const PAIRS={cub_del:'cub_tras',llanta_del:'llanta_tras',rayos_del:'rayos_tras',maza_del:'maza_tras',disco_del:'disco_tras'};
+for(const k in PAIRS)PAIRS[PAIRS[k]]=k;
+const FIN={brillo:['Brillo',.25,.35],mate:['Mate',.85,0],metal:['Metalizado',.3,.95],cromo:['Cromo',.08,1]};
+const PAL=['#111111','#3a3a3a','#8a8d93','#e8e8ea','#ffffff','#c9a27a','#7a4a2a','#d4af37','#f2b233','#ff7a1a','#ff4d2e','#d7263d','#6e0f1a','#ff3e9a','#9b30ff','#5b3cc4','#2d3a8c','#1f4fd1','#2aa8ff','#16c6c6','#0b3d2e','#1fbf6a','#9be22d','#f4e04d'];
+
+/* ---------- Escena ---------- */
+const cv=$('#cv'),stage=$('#stage');
+const renderer=new THREE.WebGLRenderer({canvas:cv,antialias:true,alpha:true,preserveDrawingBuffer:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+renderer.outputEncoding=THREE.sRGBEncoding;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(34,1,.05,50);
+camera.position.set(0.9,0.95,2.9);
+const controls=new THREE.OrbitControls(camera,cv);
+controls.target.set(0,0.6,0);controls.enableDamping=true;controls.enablePan=false;
+controls.minDistance=1.3;controls.maxDistance=5;controls.maxPolarAngle=1.52;controls.autoRotateSpeed=1.6;
+
+/* Reflejos de estudio hechos en el momento, para que el metal brille */
+{const env=new THREE.Scene();env.background=new THREE.Color('#2a2e36');
+ const lb=(w,h,x,y,z,c)=>{const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({color:c,side:2}));m.position.set(x,y,z);m.lookAt(0,0,0);env.add(m)};
+ lb(6,2,0,5,0,'#bfc3c9');lb(3,3,5,1,3,'#cfe6ff');lb(3,3,-5,1,-2,'#ffe2c4');lb(8,1,0,-3,4,'#555');
+ const pm=new THREE.PMREMGenerator(renderer);scene.environment=pm.fromScene(env,0.04).texture;}
+scene.add(new THREE.HemisphereLight('#dfe8ff','#1a1c20',.5));
+const sun=new THREE.DirectionalLight('#ffffff',1.6);sun.position.set(1.5,3.5,2);sun.castShadow=true;
+sun.shadow.mapSize.set(1024,1024);Object.assign(sun.shadow.camera,{left:-1.5,right:1.5,top:1.5,bottom:-1.5});sun.shadow.radius=6;
+scene.add(sun);
+const floor=new THREE.Mesh(new THREE.CircleGeometry(4,48),new THREE.ShadowMaterial({opacity:.5}));
+floor.rotation.x=-Math.PI/2;floor.position.y=-0.015;floor.receiveShadow=true;scene.add(floor);
+
+/* ---------- Materiales y ayudantes ---------- */
+const mats={};
+PARTS.forEach(p=>mats[p.id]=new THREE.MeshStandardMaterial({color:p.c}));
+const black=new THREE.MeshStandardMaterial({color:'#121212',roughness:.6,metalness:.4});
+const steel=new THREE.MeshStandardMaterial({color:'#9a9da2',roughness:.35,metalness:.9});
+const bike=new THREE.Group();scene.add(bike);
+const pickables=[];
+function put(geo,part,parent=bike){const m=new THREE.Mesh(geo,typeof part==='string'?mats[part]:part);
+ m.castShadow=true;if(typeof part==='string'){m.userData.part=part;pickables.push(m)}parent.add(m);return m}
+const UP=V(0,1,0);
+function tube(a,b,r,part,parent){const d=b.clone().sub(a),len=d.length();
+ const m=put(new THREE.CylinderGeometry(r,r,len,18),part,parent);
+ m.position.copy(a).addScaledVector(d,.5);m.quaternion.setFromUnitVectors(UP,d.normalize());return m}
+
+/* ---------- Ruedas ---------- */
+const RA=V(-0.6,0.36),FA=V(0.62,0.36);
+const wheels=[];
+function wheel(c,s){const g=new THREE.Group();g.position.copy(c);bike.add(g);wheels.push(g);
+ put(new THREE.TorusGeometry(0.335,0.042,16,72),'cub_'+s,g);
+ const knobs=new THREE.TorusGeometry(0.376,0.006,6,72);const kn=put(knobs,'cub_'+s,g);kn.scale.z=4;
+ put(new THREE.TorusGeometry(0.288,0.02,12,72),'llanta_'+s,g);
+ for(let i=0;i<28;i++){const t=i/28*Math.PI*2,side=i%2?1:-1;
+  tube(V(Math.cos(t+.25)*.032,Math.sin(t+.25)*.032,side*.04),V(Math.cos(t)*.272,Math.sin(t)*.272,0),.0024,'rayos_'+s,g)}
+ tube(V(0,0,-.07),V(0,0,.07),.026,'maza_'+s,g);
+ tube(V(0,0,-.045),V(0,0,-.03),.042,'maza_'+s,g);tube(V(0,0,.03),V(0,0,.045),.042,'maza_'+s,g);
+ const disc=put(new THREE.CylinderGeometry(.1,.1,.004,48),'disco_'+s,g);disc.rotation.x=Math.PI/2;disc.position.z=-.06;
+ const ring=put(new THREE.TorusGeometry(.07,.006,6,10),'disco_'+s,g);ring.position.z=-.062;
+ return g}
+wheel(FA,'del');wheel(RA,'tras');
+
+/* ---------- Cuadro ---------- */
+const BB=V(-0.04,0.33),HB=V(0.47,0.83),u=V(0.13,-0.43).normalize();
+const HT=HB.clone().addScaledVector(u,-.15),STt=V(-0.16,0.9),TTe=V(-0.13,0.76);
+tube(HB,HT,.034,'cuadro');tube(HB,BB,.032,'cuadro');tube(HT,TTe,.026,'cuadro');tube(BB,STt,.028,'cuadro');
+tube(V(BB.x,BB.y,-.05),V(BB.x,BB.y,.05),.03,'cuadro');
+tube(HB.clone().lerp(BB,.12),HT.clone().lerp(TTe,.18),.012,'cuadro');
+for(const z of[-.055,.055]){
+ tube(V(BB.x,BB.y,z*.8),V(RA.x,RA.y,z*1.1),.017,'basculante');
+ tube(V(-0.13,0.7,z*.7),V(RA.x,RA.y,z*1.1),.015,'basculante')}
+tube(V(-0.13,0.7,-.05),V(-0.13,0.7,.05),.02,'basculante');
+/* Amortiguador con resorte en espiral */
+const P1=HT.clone().lerp(TTe,.42),P2=V(-0.075,0.6),sd=P2.clone().sub(P1);
+tube(P1,P1.clone().addScaledVector(sd,.55),.022,'amortiguador');
+tube(P1.clone().addScaledVector(sd,.5),P2,.011,'amortiguador');
+{const pts=[];for(let i=0;i<=160;i++){const t=i/160,a=t*Math.PI*2*8;pts.push(V(Math.cos(a)*.034,t*.5,Math.sin(a)*.034))}
+ const sp=put(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts),320,.006,6),'resorte');
+ sp.position.copy(P1.clone().addScaledVector(sd,.42));sp.quaternion.setFromUnitVectors(UP,sd.clone().normalize());sp.scale.y=sd.length();}
+/* Horquilla */
+const C=HB.clone().addScaledVector(u,.03);
+tube(V(C.x,C.y,-.085),V(C.x,C.y,.085),.03,'horquilla');
+for(const z of[-.07,.07]){const a=V(C.x,C.y,z);
+ tube(a,a.clone().addScaledVector(u,.24),.018,'barras');
+ tube(a.clone().addScaledVector(u,.2),V(FA.x,FA.y,z),.027,'horquilla')}
+tube(V(C.x,C.y+.0),V(C.x,C.y,0).addScaledVector(u,-.2),.02,'horquilla');
+/* Frenos */
+const cal=new THREE.BoxGeometry(.07,.04,.03);
+put(cal,black).position.set(FA.x-.07,FA.y+.06,-.07);put(cal,black).position.set(RA.x+.02,RA.y+.09,-.07);
+/* Potencia, manubrio y puños */
+const S0=HT.clone().addScaledVector(u,-.05),SB=S0.clone().add(V(.06,.015));
+tube(S0,SB,.019,'potencia');tube(V(S0.x,S0.y,-.03),V(S0.x,S0.y,.03),.024,'potencia');
+tube(V(SB.x,SB.y,-.28),V(SB.x,SB.y,.28),.016,'manubrio');
+for(const z of[-1,1])tube(V(SB.x,SB.y,z*.27),V(SB.x,SB.y,z*.39),.021,'punos');
+/* Tija y asiento */
+const sdir=STt.clone().sub(BB).normalize(),PT=STt.clone().addScaledVector(sdir,.15);
+tube(STt.clone().addScaledVector(sdir,-.06),PT,.02,'tija');
+{const a=put(new THREE.SphereGeometry(1,24,12),'asiento');a.scale.set(.12,.028,.07);a.position.copy(PT).add(V(-.03,.03));
+ const b=put(new THREE.SphereGeometry(1,24,12),'asiento');b.scale.set(.11,.022,.03);b.position.copy(PT).add(V(.07,.03));}
+/* Transmisión: plato, palancas y pedales giran juntos */
+const crank=new THREE.Group();crank.position.copy(BB);bike.add(crank);
+{const pl=put(new THREE.CylinderGeometry(.095,.095,.006,32),'plato',crank);pl.rotation.x=Math.PI/2;pl.position.z=.075;
+ const tt=put(new THREE.TorusGeometry(.095,.005,4,32),'plato',crank);tt.position.z=.075;}
+tube(V(0,0,.095),V(.17,0,.095),.014,'palancas',crank);tube(V(0,0,-.095),V(-.17,0,-.095),.014,'palancas',crank);
+const pedals=[V(.17,0,.15),V(-.17,0,-.15)].map(p=>{const m=put(new THREE.BoxGeometry(.09,.018,.1),'pedales',crank);m.position.copy(p);return m});
+{const cs=put(new THREE.CylinderGeometry(.055,.03,.04,24),steel);cs.rotation.x=Math.PI/2;cs.position.set(RA.x,RA.y,.065);
+ tube(V(BB.x,BB.y+.097,.075),V(RA.x,RA.y+.055,.07),.006,black);tube(V(BB.x,BB.y-.097,.075),V(RA.x,RA.y-.055,.07),.006,black);}
+
+/* ---------- Estado del diseño ---------- */
+const fresh=()=>({name:'Mi enduro',parts:Object.fromEntries(PARTS.map(p=>[p.id,{c:p.c,f:p.f}]))});
+let design=fresh(),sel='cuadro',hist=[];
+function applyPart(id){const {c,f}=design.parts[id],m=mats[id];m.color.set(c).convertSRGBToLinear();m.roughness=FIN[f][1];m.metalness=FIN[f][2];m.needsUpdate=true}
+function applyAll(){PARTS.forEach(p=>applyPart(p.id));$('#bikeName').value=design.name;ui()}
+const snap=()=>{hist.push(JSON.stringify(design));if(hist.length>60)hist.shift()};
+function setPart(key,val){snap();const ids=[sel];if($('#link').checked&&PAIRS[sel])ids.push(PAIRS[sel]);
+ ids.forEach(id=>{design.parts[id][key]=val;applyPart(id)});flash();ui()}
+
+/* ---------- Panel ---------- */
+const byId=Object.fromEntries(PARTS.map(p=>[p.id,p]));
+$('#sw').innerHTML=PAL.map(c=>`<button style="background:${c}" data-c="${c}" aria-label="Color ${c}"></button>`).join('');
+$('#fin').innerHTML=Object.entries(FIN).map(([k,v])=>`<button data-f="${k}">${v[0]}</button>`).join('');
+$('#chips').innerHTML=PARTS.map(p=>`<button data-p="${p.id}">${p.n}</button>`).join('');
+$('#hs').innerHTML=PARTS.map(p=>`<button class="hs" data-p="${p.id}" aria-label="${p.n}"><b>${p.n}</b><i></i></button>`).join('');
+const hsEls=[...document.querySelectorAll('.hs')];
+function ui(){const cur=design.parts[sel];$('#partName').textContent=byId[sel].n;$('#pick').value=cur.c;
+ document.querySelectorAll('#sw button').forEach(b=>b.classList.toggle('on',b.dataset.c===cur.c));
+ document.querySelectorAll('#fin button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.f===cur.f));
+ document.querySelectorAll('#chips button').forEach(b=>b.classList.toggle('on',b.dataset.p===sel));
+ hsEls.forEach(b=>b.classList.toggle('sel',b.dataset.p===sel));renderSlots()}
+function select(id){sel=id;ui();flash()}
+let glow=0;function flash(){glow=1}
+document.addEventListener('click',e=>{const b=e.target.closest('[data-p]');if(b)select(b.dataset.p)});
+$('#sw').onclick=e=>{const b=e.target.closest('[data-c]');if(b)setPart('c',b.dataset.c)};
+$('#pick').onchange=e=>setPart('c',e.target.value);
+$('#fin').onclick=e=>{const b=e.target.closest('[data-f]');if(b)setPart('f',b.dataset.f)};
+$('#bikeName').oninput=e=>design.name=e.target.value||'Sin nombre';
+$('#undo').onclick=()=>{if(!hist.length)return toast('No hay nada para deshacer');design=JSON.parse(hist.pop());applyAll()};
+$('#reset').onclick=()=>{snap();const n=design.name;design=fresh();design.name=n;applyAll();toast('Volvió a los colores de fábrica')};
+$('#rand').onclick=()=>{snap();const r=a=>a[Math.random()*a.length|0],rub=['#111111','#1c1c1c','#3a3a3a','#c9a27a','#7a4a2a'];
+ const main=r(PAL),acc=r(PAL);
+ PARTS.forEach(p=>{let c=Math.random()<.5?acc:r(PAL);
+  if(/^cub|punos|asiento/.test(p.id))c=Math.random()<.8?r(rub):acc;if(p.id==='cuadro'||p.id==='basculante')c=main;
+  design.parts[p.id]={c,f:p.id==='cuadro'||p.id==='basculante'?r(['brillo','mate','metal']):p.f}});
+ for(const k in PAIRS)if(k.endsWith('del'))design.parts[PAIRS[k]]={...design.parts[k]};applyAll()};
+
+/* ---------- Toque directo sobre la bici ---------- */
+const ray=new THREE.Raycaster(),ptr=new THREE.Vector2();let down=null;
+cv.addEventListener('pointerdown',e=>down=[e.clientX,e.clientY]);
+cv.addEventListener('pointerup',e=>{if(!down||Math.hypot(e.clientX-down[0],e.clientY-down[1])>6)return;
+ const r=cv.getBoundingClientRect();ptr.set((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1);
+ ray.setFromCamera(ptr,camera);const hit=ray.intersectObjects(pickables)[0];if(hit)select(hit.object.userData.part)});
+
+/* ---------- Botones del escenario ---------- */
+const VIEWS={lado:[0,0.62,3],tres:[1.9,1.15,2.3],frente:[3,0.85,0.25]};let camGoal=null;
+document.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>camGoal=V(...VIEWS[b.dataset.view]));
+const tog=(id,fn)=>$(id).onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';e.currentTarget.setAttribute('aria-pressed',on);fn(on)};
+let riding=false;tog('#ride',on=>{riding=on;$('#ride').textContent=on?'■ Frenar':'▶ Andar'});
+tog('#spin',on=>controls.autoRotate=on);
+tog('#marks',on=>document.body.classList.toggle('hidehs',!on));
+
+/* ---------- Garaje: 4 lugares, guardados en este navegador ---------- */
+const KEY='taller-bici-3d-v1';
+const load=()=>{try{return JSON.parse(localStorage.getItem(KEY))||[null,null,null,null]}catch(e){return[null,null,null,null]}};
+let slots=load();
+const store=()=>{try{localStorage.setItem(KEY,JSON.stringify(slots))}catch(e){toast('Este navegador no deja guardar: usá el código para compartir')}};
+function thumb(){renderer.render(scene,camera);const c=document.createElement('canvas');c.width=320;c.height=200;
+ const s=cv,r=Math.max(320/s.width,200/s.height),w=s.width*r,h=s.height*r;
+ c.getContext('2d').drawImage(s,(320-w)/2,(200-h)/2,w,h);return c.toDataURL('image/jpeg',.75)}
+function renderSlots(){$('#slots').innerHTML=slots.map((s,i)=>`<button data-save="${i}" class="${s?'full':''}" title="${s?'Pisar '+s.name:'Lugar vacío'}">${i+1}</button>`).join('')}
+$('#slots').onclick=e=>{const b=e.target.closest('[data-save]');if(!b)return;const i=+b.dataset.save;
+ slots[i]={...JSON.parse(JSON.stringify(design)),img:thumb()};store();renderSlots();toast(`Guardada en el lugar ${i+1}`)};
+function renderCards(){$('#cards').innerHTML=slots.map((s,i)=>s?`<div class="card"><div class="th"><img src="${s.img}" alt="${s.name.replace(/[<>"]/g,'')}"></div>
+ <div class="b"><strong>${i+1}. ${s.name.replace(/[<>&]/g,'')}</strong><div class="row"><button data-load="${i}">Cargar</button><button data-del="${i}">Borrar</button></div></div></div>`
+ :`<div class="card"><div class="th">Lugar ${i+1} vacío</div><div class="b"><span class="note">Guardá con el botón ${i+1} del panel</span></div></div>`).join('')}
+$('#cards').onclick=e=>{const l=e.target.closest('[data-load]'),d=e.target.closest('[data-del]');
+ if(l){snap();const s=slots[+l.dataset.load];design={name:s.name,parts:JSON.parse(JSON.stringify(s.parts))};applyAll();$('#garage').close();toast('Bici cargada')}
+ if(d){slots[+d.dataset.del]=null;store();renderCards();renderSlots()}};
+$('#openGarage').onclick=()=>{renderCards();$('#garage').showModal()};
+$('#closeGarage').onclick=()=>$('#garage').close();
+const enc=d=>btoa(unescape(encodeURIComponent(JSON.stringify(d))));
+$('#copyCode').onclick=async()=>{const c=enc(design);$('#code').value=c;
+ try{await navigator.clipboard.writeText(c);toast('Código copiado')}catch(e){$('#code').select();toast('Seleccioné el código: copialo con Ctrl+C')}};
+$('#loadCode').onclick=()=>{try{const d=JSON.parse(decodeURIComponent(escape(atob($('#code').value.trim()))));
+ if(!d.parts)throw 0;snap();design=fresh();design.name=String(d.name||'Bici compartida').slice(0,24);
+ for(const id in design.parts)if(d.parts[id]&&/^#[0-9a-f]{6}$/i.test(d.parts[id].c)&&FIN[d.parts[id].f])design.parts[id]=d.parts[id];
+ applyAll();$('#garage').close();toast('Bici compartida cargada')}catch(e){toast('Ese código no es válido')}};
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('show'),2200)}
+
+/* ---------- Tamaño, marcadores y animación ---------- */
+const ro=new ResizeObserver(()=>{const w=stage.clientWidth,h=stage.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;
+ const asp=w/h;camera.fov=asp<1.3?2*Math.atan(Math.tan(17*Math.PI/180)*1.3/asp)*180/Math.PI:34;camera.updateProjectionMatrix();document.body.classList.toggle('nolabels',w<640)});ro.observe(stage);
+const tmp=new THREE.Vector3(),clock=new THREE.Clock();
+const still=matchMedia('(prefers-reduced-motion: reduce)').matches;
+function frame(){const dt=Math.min(clock.getDelta(),.05);
+ if(camGoal){camera.position.lerp(camGoal,still?1:.12);if(camera.position.distanceTo(camGoal)<.01)camGoal=null}
+ controls.update();
+ if(riding){wheels.forEach(w=>w.rotation.z-=dt*6);crank.rotation.z-=dt*2.4;pedals.forEach(p=>p.rotation.z=-crank.rotation.z)}
+ if(glow>0){glow=Math.max(0,glow-dt*1.6);}
+ PARTS.forEach(p=>{const m=mats[p.id];m.emissive.set(p.id===sel?'#3ddc6b':'#000');m.emissiveIntensity=p.id===sel?glow*.6:0});
+ const w=stage.clientWidth,h=stage.clientHeight;
+ hsEls.forEach((el,i)=>{tmp.copy(PARTS[i].a).project(camera);
+  el.style.display=tmp.z>1?'none':'';el.style.left=(tmp.x*.5+.5)*w+'px';el.style.top=(-tmp.y*.5+.5)*h+'px';
+  el.style.zIndex=el.classList.contains('sel')?99:Math.round((1-tmp.z)*1e4)});
+ renderer.render(scene,camera);requestAnimationFrame(frame)}
+applyAll();select('cuadro');frame();
+ const CapApp=window.Capacitor&&window.Capacitor.Plugins&&window.Capacitor.Plugins.App;
+ if(CapApp)CapApp.addListener('backButton',()=>{const g=$('#garage');if(g.open)g.close();else CapApp.exitApp()});
+ document.addEventListener('visibilitychange',()=>{if(document.hidden&&riding)$('#ride').click()});
+}
+</script>
+</body>
+</html>

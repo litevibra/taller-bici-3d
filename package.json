@@ -1,0 +1,23 @@
+{
+  "name": "taller-bici-3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Taller de Bicis 3D - configurador de bicicletas para Android",
+  "scripts": {
+    "vendor": "node scripts/vendor.mjs",
+    "sync": "npm run vendor && npx cap sync android",
+    "generar-clave": "node scripts/generar-clave.mjs"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/app": "^8.1.2",
+    "@capacitor/core": "^8.6.2",
+    "@fontsource/barlow": "^5.3.0",
+    "@fontsource/barlow-condensed": "^5.3.0",
+    "three": "^0.128.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.6.2",
+    "node-forge": "^1.4.4"
+  }
+}

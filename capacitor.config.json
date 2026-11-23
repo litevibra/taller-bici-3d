@@ -1,0 +1,10 @@
+{
+  "appId": "com.lilisegretin.tallerbici3d",
+  "appName": "Taller de Bicis 3D",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": false,
+    "webContentsDebuggingEnabled": false
+  }
+}
